@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.example"
+<addon id="plugin.video.youtube"
 version="2.4.0"
-name="Example Kodi Video Plugin"
+name="Youtube Kodi Video Plugin"
 provider-name="Roman_V_M">
 <requires>
   <import addon="xbmc.python" version="3.0.0"/>
+  <import addon="script.module.requests" version="2.12.4"/>
 </requires>
 <extension point="xbmc.python.pluginsource" library="main.py">
   <provides>video</provides>

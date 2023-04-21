@@ -9,6 +9,9 @@ import sys
 from urllib.parse import urlencode, parse_qsl
 import xbmcgui
 import xbmcplugin
+import requests
+import functools
+
 
 # Get the plugin url in plugin:// notation.
 _URL = sys.argv[0]
@@ -194,7 +197,6 @@ def list_videos(category):
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(_HANDLE)
 
-
 def play_video(path):
     """
     Play a video by the provided path.
@@ -202,10 +204,49 @@ def play_video(path):
     :param path: Fully-qualified video URL
     :type path: str
     """
+    # web_pdb.set_trace()
+
     # Create a playable item with a path to play.
-    play_item = xbmcgui.ListItem(path=path)
+    response = requests.get(f'https://pipedapi.kavin.rocks/streams/{path}')
+
+    def reducer(acc: dict, item: dict):
+        if item["videoOnly"] == True:
+            return acc
+
+        quality = int(item["quality"][:-1])
+        if quality >= acc["quality"]:
+            return {
+                "quality": quality,
+                "url": item["url"]
+            }
+        else:
+            return acc
+    stream = functools.reduce(reducer, response.json()['videoStreams'], {"quality": 0})
+    # video_stream = next(
+    #     (stream['url']
+    #      for stream in response.json()['videoStreams']
+    #      if stream['format'] == 'MPEG_4' and stream['quality'] == '1440p60'),
+    #     None,
+    # )
+    # combined_stream_url = combine_video_audio_streams(video_stream=video_stream, audio_stream=audio_stream)
+    if stream["quality"] == 0:
+        raise ValueError("could not find valid stream")
+    play_item = xbmcgui.ListItem(path=stream["url"])
     # Pass the item to the Kodi player.
     xbmcplugin.setResolvedUrl(_HANDLE, True, listitem=play_item)
+
+    # xbmc.Player().play(hls_url)
+# def play_video(path):
+#     """
+#     Play a video by the provided path.
+
+#     :param path: Fully-qualified video URL
+#     :type path: str
+#     """
+#     # Create a playable item with a path to play.
+#     play_item = xbmcgui.ListItem(path=path)
+#     # Pass the item to the Kodi player.
+#     xbmcplugin.setResolvedUrl(_HANDLE, True, listitem=play_item)
 
 
 def router(paramstring):
@@ -226,7 +267,7 @@ def router(paramstring):
             list_videos(params['category'])
         elif params['action'] == 'play':
             # Play a video from a provided URL.
-            play_video(params['video'])
+            play_video(params['video_id'])
         else:
             # If the provided paramstring does not contain a supported action
             # we raise an exception. This helps to catch coding errors,
