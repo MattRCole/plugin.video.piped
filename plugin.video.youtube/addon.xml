@@ -6,11 +6,13 @@ provider-name="Roman_V_M">
 <requires>
   <import addon="xbmc.python" version="3.0.0"/>
   <import addon="script.module.requests" version="2.27.1"/>
+  <import addon="script.module.ttml2ssa" version="0.3.8"/>
   <!-- <import addon="script.module.web-pdb" version="1.5.6"/> -->
 </requires>
-<extension point="xbmc.python.pluginsource" library="main.py">
+<extension point="xbmc.python.pluginsource" library="resources/lib/main.py">
   <provides>video</provides>
 </extension>
+<extension point="xbmc.python.module" library="resources/lib"/>
 <extension point="xbmc.addon.metadata">
   <summary lang="en">Example Kodi Video Plugin</summary>
   <description lang="en_GB">An example video plugin for Kodi mediacenter.</description>
