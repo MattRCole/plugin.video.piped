@@ -249,7 +249,7 @@ def play_video(path):
 #     xbmcplugin.setResolvedUrl(_HANDLE, True, listitem=play_item)
 
 
-def router(paramstring):
+def router(paramstring, action = None):
     """
     Router function that calls other functions
     depending on the provided paramstring
@@ -261,11 +261,11 @@ def router(paramstring):
     # {<parameter>: <value>} elements
     params = dict(parse_qsl(paramstring))
     # Check the parameters passed to the plugin
-    if params:
-        if params['action'] == 'listing':
+    if action:
+        if action == 'listing':
             # Display the list of videos in a provided category.
             list_videos(params['category'])
-        elif params['action'] == 'play':
+        elif action == 'play':
             # Play a video from a provided URL.
             play_video(params['video_id'])
         else:
@@ -282,4 +282,7 @@ def router(paramstring):
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring
-    router(sys.argv[2][1:])
+    # import web_pdb; web_pdb.set_trace()
+    [*_, action] = [segment for segment in sys.argv[0].split('/') if segment != '']
+    # args = [arg for arg in sys.argv]
+    router(sys.argv[2][1:], action)
