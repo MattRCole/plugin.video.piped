@@ -63,3 +63,5 @@ target/
 .idea/
 
 *.zip
+/extra-lib
+/.vscode
