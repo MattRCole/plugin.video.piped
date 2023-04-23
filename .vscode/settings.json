@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./plugin.video.youtube/resources/lib"
+        "./plugin.video.youtube/resources/lib",
+        "./extra-lib"
     ]
 }
