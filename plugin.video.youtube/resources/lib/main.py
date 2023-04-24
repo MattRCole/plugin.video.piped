@@ -1,12 +1,5 @@
-# Module: main
-# Author: Roman V. M.
-# Created on: 28.11.2014
-# License: GPL v.3 https://www.gnu.org/copyleft/gpl.html
-"""
-Example video plugin that is compatible with Kodi 19.x "Matrix" and above
-"""
 import functools
-from typing import Callable, List, Optional, TypedDict, cast
+from typing import List, Optional, TypedDict, cast
 
 import m3u8
 import m3u8.mixins
@@ -16,7 +9,6 @@ import sys
 import os
 import shutil
 from urllib.parse import urlencode, parse_qsl
-import xbmc
 import xbmcgui
 import xbmcvfs
 import xbmcplugin
@@ -24,10 +16,9 @@ import xbmcplugin
 from piped.types import Stream, StreamResponse, StreamSubtitle
 
 
-# _URL = sys.argv[0]
 _HANDLE = int(sys.argv[1])
 
-def get_subtitle_from_piped(subtitle: Optional[StreamSubtitle], stream: Stream) -> Optional[str]:
+def get_subtitle_from_piped(subtitle: Optional[StreamSubtitle], frame_rate: float) -> Optional[str]:
     if subtitle is None:
         return None
 
@@ -36,12 +27,12 @@ def get_subtitle_from_piped(subtitle: Optional[StreamSubtitle], stream: Stream) 
         return None
 
     try:
-        ttml = Ttml2Ssa(source_fps=stream["fps"])
+        ttml = Ttml2Ssa(source_fps=frame_rate)
 
         ttml.parse_ttml_from_string(response.text)
         path = "/tmp/piped-subtitles.srt"
         ttml.write2file(path)
-        return path  # "file:/{path}"
+        return path
     except Exception:
         return None
 
@@ -58,11 +49,7 @@ def get_playlist_ready(
     
     Mutates playlist_ref!
     """
-
-    # import web_pdb; web_pdb.set_trace()
-    # resolved_url = playlist_ref.absolute_uri if playlist_ref.absolute_uri[:4] == 'http' else f"{base_url}/{playlist_ref.absolute_uri}"
     resolved_url = f"{base_url}/{playlist_ref.uri}"
-
     playlist = m3u8.load(resolved_url)
 
     for s in playlist.segments:
@@ -70,6 +57,8 @@ def get_playlist_ready(
         segment.base_path = f"{base_url}{segment.base_path}"
     
     with open(f"{base_dir}/{hls_path}", "w") as file:
+        # There seems to be a bug in m3u8 and it's impossible to update the EXT-X-MAP
+        # URI. For now, this really does seem to be the easiest way to add the base_url to the uri
         file.write(
             playlist.dumps().replace('URI="/', f'URI="{base_url}/')
         )
@@ -85,7 +74,6 @@ def get_playlist_ready(
 def play_video(path):
     response = requests.get(f'https://pipedapi.kavin.rocks/streams/{path}')
     piped_response: StreamResponse = response.json()
-    # import web_pdb; web_pdb.set_trace()
 
     master_playlist = m3u8.load(piped_response['hls'])
 
@@ -121,6 +109,7 @@ def play_video(path):
 
     base_url = f"{protocol}//{domain}"
     base_dir = "/tmp/piped/hls-manifests"
+
     shutil.rmtree(base_dir, ignore_errors=True)
     os.makedirs(base_dir)
 
@@ -128,8 +117,6 @@ def play_video(path):
     new_master_playlist = m3u8.M3U8()
 
     audio_id: str = video_playlist.stream_info.audio
-
-    # import web_pdb; web_pdb.set_trace()
 
     audio_playlists: List[m3u8.Media] = [m for m in master_playlist.media if m.group_id == audio_id and 'en' in (m.language or 'en')]
 
@@ -165,7 +152,7 @@ def play_video(path):
     list_item.setProperty("inputstream.ffmpegdirect.manifest_type", "hls")
     list_item.setProperty("inputstream.ffmpegdirect.open_mode", "ffmpeg")
 
-    subtitle_path = get_subtitle_from_piped(subtitle, piped_response['videoStreams'][0])
+    subtitle_path = get_subtitle_from_piped(subtitle, video_playlist.stream_info.frame_rate)
     if subtitle_path is not None:
         list_item.setSubtitles([subtitle_path])
 
@@ -178,27 +165,16 @@ def play_video(path):
 
 def router(paramstring, action = None):
     """
-    Router function that calls other functions
-    depending on the provided paramstring
-
-    :param paramstring: URL encoded plugin paramstring
-    :type paramstring: str
+    Hold over from the example. Might be useful later
     """
     params = dict(parse_qsl(paramstring))
     if action:
         if action == 'play':
-            # Play a video from a provided URL.
             play_video(params['video_id'])
         else:
             raise ValueError('Invalid paramstring: {}!'.format(paramstring))
-    # else:
-    #     list_categories()
 
 
 if __name__ == '__main__':
-    # Call the router function and pass the plugin call parameters to it.
-    # We use string slicing to trim the leading '?' from the plugin call paramstring
-    # import web_pdb; web_pdb.set_trace()
     [*_, action] = [segment for segment in sys.argv[0].split('/') if segment != '']
-    # args = [arg for arg in sys.argv]
     router(sys.argv[2][1:], action)
