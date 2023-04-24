@@ -6,7 +6,7 @@
 Example video plugin that is compatible with Kodi 19.x "Matrix" and above
 """
 import functools
-from typing import Callable, Optional, TypedDict, cast
+from typing import Callable, List, Optional, TypedDict, cast
 
 import m3u8
 import m3u8.mixins
@@ -16,8 +16,9 @@ import sys
 import os
 import shutil
 from urllib.parse import urlencode, parse_qsl
-# import xbmc
+import xbmc
 import xbmcgui
+import xbmcvfs
 import xbmcplugin
 
 from piped.types import Stream, StreamResponse, StreamSubtitle
@@ -68,7 +69,10 @@ def get_playlist_ready(
         segment = cast(m3u8.Segment, s)
         segment.base_path = f"{base_url}{segment.base_path}"
     
-    playlist.dump(f"{base_dir}/{hls_path}")
+    with open(f"{base_dir}/{hls_path}", "w") as file:
+        file.write(
+            playlist.dumps().replace('URI="/', f'URI="{base_url}/')
+        )
 
     # ordering matters here apparently, also these 3 are all necessary
     playlist_ref.uri = hls_path
@@ -83,14 +87,13 @@ def play_video(path):
     piped_response: StreamResponse = response.json()
     # import web_pdb; web_pdb.set_trace()
 
-    # raw_playlist = requests.get(piped_response['hls']).text
-
-    # master_playlist = m3u8.loads(raw_playlist, uri="/tmp/piped/hls-manifests/index.m3u8")
     master_playlist = m3u8.load(piped_response['hls'])
 
     class Acc(TypedDict, total=False):
-        pps: int
+        res_0: int
+        fps: int
         playlist: m3u8.Playlist
+        bandwidth: int
 
     def playlist_reducer(acc: Acc, playlist: m3u8.Playlist) -> Acc:
         stream_info = playlist.stream_info
@@ -103,12 +106,16 @@ def play_video(path):
         resolution: tuple[int, int] = stream_info.resolution
         frame_rate = stream_info.frame_rate if int(stream_info.frame_rate) is not None else 1
 
-        pps = resolution[0] * resolution[1] * frame_rate
-
-        if pps <= acc["pps"]:
+        if resolution[0] > 1920 or resolution[0] < acc["res_0"]:
             return acc
 
-        return {"pps": pps, "playlist": playlist}
+        if frame_rate < acc["fps"]:
+            return acc
+
+        if stream_info.bandwidth < acc["bandwidth"]:
+            return acc
+
+        return {"fps": frame_rate, "res_0": resolution[0], "playlist": playlist, "bandwidth": stream_info.bandwidth}
 
     [protocol, _, domain, *__] = piped_response['hls'].split('/')
 
@@ -117,15 +124,21 @@ def play_video(path):
     shutil.rmtree(base_dir, ignore_errors=True)
     os.makedirs(base_dir)
 
-    video_playlist = functools.reduce(playlist_reducer, list(master_playlist.playlists), {"pps": 0})["playlist"]
+    video_playlist = functools.reduce(playlist_reducer, list(master_playlist.playlists), {"res_0": 0, "fps": 0, "bandwidth": 0})["playlist"]
     new_master_playlist = m3u8.M3U8()
 
     audio_id: str = video_playlist.stream_info.audio
 
-    [audio_playlist] = [m for m in master_playlist.media if m.group_id == audio_id]
+    # import web_pdb; web_pdb.set_trace()
+
+    audio_playlists: List[m3u8.Media] = [m for m in master_playlist.media if m.group_id == audio_id and 'en' in (m.language or 'en')]
 
     get_playlist_ready(video_playlist, base_url=base_url, base_dir=base_dir, hls_path="video-index.m3u8")
-    get_playlist_ready(audio_playlist, base_url=base_url, base_dir=base_dir, hls_path="audio-index.m3u8")
+    video_playlist.stream_info.subtitles = 'NONE'
+    for audio_playlist in audio_playlists:
+        audio_path = xbmcvfs.makeLegalFilename(f"{audio_playlist.language}-audio-index.m3u8").lstrip('/').rstrip('/')
+        get_playlist_ready(audio_playlist, base_url=base_url, base_dir=base_dir, hls_path=audio_path)
+        audio_playlist
 
     new_master_playlist.add_playlist(video_playlist)
     new_master_playlist.add_media(audio_playlist)
@@ -149,18 +162,8 @@ def play_video(path):
     list_item.setContentLookup(False)
     list_item.setProperty("inputstream", "inputstream.ffmpegdirect")
     list_item.setProperty("inputstream.ffmpegdirect.is_realtime_stream", "false")
-    # list_item.setProperty("inputstream.ffmpegdirect.stream_mode", "timeshift")
-    # list_item.setProperty("inputstream.ffmpegdirect.stream_mode", "catchup")
     list_item.setProperty("inputstream.ffmpegdirect.manifest_type", "hls")
     list_item.setProperty("inputstream.ffmpegdirect.open_mode", "ffmpeg")
-    # list_item.setProperty("inputstream.ffmpegdirect.playback_as_live", "true")
-    # list_item.setProperty(
-    #     "inputstream.ffmpegdirect.default_programme_duration",
-    #     str(piped_response["duration"]),
-    # )
-
-    # list_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
-    # list_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
 
     subtitle_path = get_subtitle_from_piped(subtitle, piped_response['videoStreams'][0])
     if subtitle_path is not None:

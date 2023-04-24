@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 
 
 class Stream(TypedDict, total=False):
@@ -28,7 +28,7 @@ class StreamSubtitle(TypedDict, total=False):
 
 
 class PreviewFrame(TypedDict, total=False):
-    urls: list[str]
+    urls: List[str]
     frameWidth: int
     frameHeight: int
     totalCount: int
@@ -64,8 +64,8 @@ class StreamResponse(TypedDict, total=False):
     views: int
     likes: int
 
-    audioStreams: list[Stream]
-    chapters: list[Chapter]
-    previewFrames: list[PreviewFrame]
-    subtitles: list[StreamSubtitle]
-    videoStreams: list[Stream]
+    audioStreams: List[Stream]
+    chapters: List[Chapter]
+    previewFrames: List[PreviewFrame]
+    subtitles: List[StreamSubtitle]
+    videoStreams: List[Stream]
