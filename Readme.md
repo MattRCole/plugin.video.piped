@@ -1,6 +1,6 @@
 # Piped plugin for Kodi
 
-This is an extremely bare bones plugin for Kodi that uses the (Piped)[https://github.com/TeamPiped/Piped] backend to watch YouTube videos.
+This is an extremely bare bones plugin for Kodi that uses the [Piped](https://github.com/TeamPiped/Piped) backend to watch YouTube videos.
 
 Compatible with Kodi 19.5+
 
@@ -51,5 +51,9 @@ Yes please! I don't have the time to learn how to program kodi addons, my job ta
 Please please please include types. I know that limits backwards compatibility, but it's worth it.
 
 Warning: the `m3u8` library that `kodi` uses is older than the one available in `pypi` and has some differences.
+
+## Financial support
+
+If you find this addon useful, make a donation to the people @[Team Piped](https://github.com/TeamPiped)
 
 License: [GPL v.3](http://www.gnu.org/copyleft/gpl.html)
