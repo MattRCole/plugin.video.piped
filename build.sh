@@ -2,15 +2,15 @@
 
 source .env
 
-rm ./plugin.video.youtube*.zip > /dev/null 2>&1
+rm ./plugin.video.piped*.zip > /dev/null 2>/dev/null
 
-cp -r ./plugin.video.youtube ./_plugin.video.youtube
+cp -r ./plugin.video.piped ./_plugin.video.piped
 
-sed -i -e "s/__PLUGIN_VERSION__/${pluginVersion}/g" ./plugin.video.youtube/addon.xml
+sed -i -e "s/__PLUGIN_VERSION__/${pluginVersion}/g" ./plugin.video.piped/addon.xml
 
-zip -r "plugin.video.youtube-${pluginVersion}.zip" ./plugin.video.youtube
+zip -r "plugin.video.piped-${pluginVersion}.zip" ./plugin.video.piped
 
-rm -r ./plugin.video.youtube
+rm -r ./plugin.video.piped
 
-mv ./_plugin.video.youtube ./plugin.video.youtube
+mv ./_plugin.video.piped ./plugin.video.piped
 
